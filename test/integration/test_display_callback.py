@@ -223,6 +223,35 @@ def test_resolved_actions(executor, playbook, skipif_pre_ansible212):  # pylint:
     assert events[2]["event_data"]["resolved_action"] == "ansible.builtin.shell"
 
 
+@pytest.mark.parametrize(
+    "playbook",
+    [
+        {
+            "become_task.yml": """
+- name: becometask
+  connection: local
+  hosts: all
+  gather_facts: no
+  tasks:
+    - shell: echo "resolved actions test!"
+      become: true
+      become_user: root
+"""
+        },  # noqa
+    ],
+)
+def test_become_task(executor, playbook, skipif_pre_ansible212):  # pylint: disable=W0613,W0621
+    executor.run()
+    events = list(executor.events)
+
+    # task 1
+    assert events[2]["event"] == "playbook_on_task_start"
+    assert "task_become" in events[2]["event_data"]
+    assert "task_become_user" in events[2]["event_data"]
+    assert events[2]["event_data"]["task_become"] == "true"
+    assert events[2]["event_data"]["task_become_user"] == "root"
+
+
 @pytest.mark.parametrize("playbook", [
 {'loop_with_no_log.yml': '''
 - name: playbook variable should not be overwritten when using no log
